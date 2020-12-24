@@ -1,0 +1,17 @@
+Client
+Server
+Base64.lua
+Date.lua
+ListenerList.lua 
+NumberUtil.lua
+Promise.lua
+PropertyModule.lua
+StringUtil.lua 
+Thread.lua
+VectorUtil.lua
+.agf
+default.project.json
+rojo.json
+selene.toml
+_framework
+.vscode
