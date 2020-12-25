@@ -9,10 +9,10 @@ PropertyModule.lua
 StringUtil.lua 
 Thread.lua
 VectorUtil.lua
+Maid.lua
 .agf
 default.project.json
 rojo.json
 selene.toml
 _framework
 .vscode
-Maid.lua
