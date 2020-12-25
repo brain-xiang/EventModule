@@ -6,6 +6,7 @@
 	
 	TableUtil.Copy(Table tbl)
 	TableUtil.CopyShallow(Table tbl)
+	TableUtil.SafeCopy(Table tbl)
 	TableUtil.Sync(Table tbl, Table templateTbl)
 	TableUtil.Print(Table tbl, String label, Boolean deepPrint)
 	TableUtil.FastRemove(Table tbl, Number index)
@@ -233,6 +234,32 @@ local function CopyTableShallow(t)
 	return tCopy
 end
 
+local function SafeCopyTable(t, parentTables)
+	--[[
+		CopyTable that accounts for cyclic dependencies
+
+		parentTables = {
+			originalTable* = copiedTable*
+		}
+	]]
+	assert(type(t) == "table", "First argument must be a table")
+	local tCopy = table.create(#t)
+	parentTables = parentTables and CopyTableShallow(parentTables) or {}
+	parentTables[t] = tCopy
+	for k,v in pairs(t) do
+		if (type(v) == "table") then
+			if parentTables[v] then
+				tCopy[k] = parentTables[v]
+			else
+				tCopy[k] = SafeCopyTable(v, parentTables)
+			end
+		else
+			tCopy[k] = v
+		end
+	end
+	return tCopy
+end
+
 
 local function Sync(tbl, templateTbl)
 
@@ -452,6 +479,7 @@ end
 
 
 TableUtil.Copy = CopyTable
+TableUtil.SafeCopy = SafeCopyTable
 TableUtil.CopyShallow = CopyTableShallow
 TableUtil.Sync = Sync
 TableUtil.FastRemove = FastRemove
