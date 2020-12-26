@@ -1,7 +1,7 @@
 return function()
     while (not _G.Aero) do wait() end
     local aero = _G.Aero
-    local ChangedSignalModule = aero.Shared.ChangedSignalModule
+    local ChangedSignalModule = aero.Shared.EventModule
 
     describe("new", function()
         it("should construct from nothing", function()
@@ -214,5 +214,39 @@ return function()
             expect(callCount).to.equal(3)
         end)
             
+    end)
+
+    describe("Looping", function()
+        it("Object loopable with self:pairs() and self:ipairs()", function()
+            local Table = ChangedSignalModule.new({1,2,3, a = {4,5,6}})
+            local callCount = 0
+
+            Table.a.mutated:Connect(function()
+                callCount = callCount + 1
+            end)
+
+            expect(function()
+                --ipairs should loop numarically
+                for i,v in Table:ipairs() do
+                    expect(i).to.equal(v)
+                end
+
+                --loop should return nested tables as objects
+                for i,v in Table:pairs() do
+                    expect(i).never.to.equal("Parent")
+                    if typeof(v) == "table" then
+                        -- Object values need to be available
+                        expect(v[1]).to.equal(4)
+
+                        --Parent Object exists
+                        expect(v.Parent).to.equal(Table)
+
+                        -- mutations fires event
+                        v[1] = true
+                        expect(callCount).to.equal(1)
+                    end
+                end
+            end).never.to.throw()
+        end)
     end)
 end

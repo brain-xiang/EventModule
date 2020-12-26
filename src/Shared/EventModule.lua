@@ -10,6 +10,8 @@ Injected Properties:
     self.Parent
     self.mutated
     self:GetPropertyChangedEvent(propertyName)
+    self:pairs()
+    self:ipairs()
     self:Disconnect()
     self:DisconnectDescendants()
     self:DisconnectAllParents(object)
@@ -42,6 +44,20 @@ Injected Properties:
                 oldVal = property's old value
                 newVal = property's new value
             end)
+
+        pairs:
+            
+            Using roblox's pairs() function on the object will error so self:pairs() is a replacement for that,
+            it returns what you would expect from pairs(self).
+
+            self:pairs() == pairs(self) 
+
+        ipairs:
+            
+            Using roblox's ipairs() function on the object will error so self:ipairs() is a replacement for that,
+            it returns what you would expect from ipairs(self).
+
+            self:ipairs() == ipairs(self) 
 
         Disconnect:
 
@@ -192,6 +208,14 @@ function EventModule:GetPropertyChangedEvent(Key)
     ]]
     self.events[Key] = self.events[Key] and self.events[Key] or Signal.new()
     return self.events[Key]
+end
+
+function EventModule:pairs()
+    return pairs(self.properties)
+end
+
+function EventModule:ipairs()
+    return ipairs(self.properties)
 end
 
 function EventModule:Disconnect(events)
