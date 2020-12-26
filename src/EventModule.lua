@@ -25,7 +25,7 @@ Injected Properties:
     Details:
         Parent:
 
-            Table that contains self
+            Table that contains self's parent object
 
             local tbl = EventModule.new({a = {}})
             a.Parent == tbl
@@ -197,8 +197,7 @@ function EventModule.new(tbl, parent)
             
             -- Disconecting signals when object no longer indexed
             if typeof(self.properties[key]) == "table" then
-                self.properties[key]:Disconnect()
-                self.properties[key]:DisconnectDescendants()
+                self.properties[key]:Destroy()
             end
 
             -- Firing propertyChangedEvents
