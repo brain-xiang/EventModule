@@ -1,0 +1,12 @@
+{
+	"name": "EventModule",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"EventModule": {
+        "$path": "src"
+      }
+    }
+	}
+}

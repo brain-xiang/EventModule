@@ -1,7 +1,5 @@
 return function()
-    while (not _G.Aero) do wait() end
-    local aero = _G.Aero
-    local ChangedSignalModule = aero.Shared.EventModule
+    local ChangedSignalModule = require(script.Parent.EventModule)
 
     describe("new", function()
         it("should construct from nothing", function()

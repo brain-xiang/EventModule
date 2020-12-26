@@ -1,7 +1,5 @@
 return function()
-    while (not _G.Aero) do wait() end
-    local aero = _G.Aero
-    local TableUtil = aero.Shared.TableUtil
+    local TableUtil = require(script.Parent.TableUtil)
 
     describe("SafeCopyTable", function()
         it("should copy deep tables", function()
