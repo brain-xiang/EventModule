@@ -153,6 +153,8 @@ Injected Properties:
 
 
 local EventModule = {}
+local Signal = require(script.Parent.Signal)
+local TableUtil = require(script.Parent.TableUtil)
 
 function EventModule.new(tbl, parent)
     --[[
@@ -381,12 +383,6 @@ function EventModule:Destroy()
     self = nil
 
     return properties
-end
-
-
-function EventModule:Init()
-    Signal = self.Shared.Signal
-    TableUtil = self.Shared.TableUtil
 end
 
 return EventModule

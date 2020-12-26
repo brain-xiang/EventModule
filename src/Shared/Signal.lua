@@ -8,7 +8,6 @@
 
 	signal:Fire(...)
 	signal:Wait()
-	signal:WaitPromise()
 	signal:Destroy()
 	signal:DisconnectAll()
 	
@@ -19,8 +18,6 @@
 	connection:IsConnected()
 
 --]]
-
-local Promise
 
 local Connection = {}
 Connection.__index = Connection
@@ -104,12 +101,6 @@ function Signal:Wait()
 end
 
 
-function Signal:WaitPromise()
-	return Promise.new(function(resolve)
-		resolve(self:Wait())
-	end)
-end
-
 
 function Signal:Connect(handler)
 	local connection = Connection.new(self, self._bindable.Event:Connect(function(id)
@@ -139,11 +130,6 @@ end
 function Signal:Destroy()
 	self:DisconnectAll()
 	self._bindable:Destroy()
-end
-
-
-function Signal:Init()
-	Promise = self.Shared.Promise
 end
 
 
