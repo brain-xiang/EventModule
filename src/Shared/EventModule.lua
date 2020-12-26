@@ -12,6 +12,7 @@ Injected Properties:
     self:GetPropertyChangedEvent(propertyName)
     self:pairs()
     self:ipairs()
+    self:len()
     self:Disconnect()
     self:DisconnectDescendants()
     self:DisconnectAllParents(object)
@@ -58,6 +59,13 @@ Injected Properties:
             it returns what you would expect from ipairs(self).
 
             self:ipairs() == ipairs(self) 
+
+        len:
+
+            Using roblox's # length function on the object will error so self:len() is a replacement for that,
+            it returns what you would expect from #self.
+
+            self:len() -- > table length
 
         Disconnect:
 
@@ -211,11 +219,19 @@ function EventModule:GetPropertyChangedEvent(Key)
 end
 
 function EventModule:pairs()
-    return pairs(self.properties)
+    local shallowCopy = TableUtil.CopyShallow(self.properties)
+    shallowCopy.Parent = nil
+    return pairs(shallowCopy)
 end
 
 function EventModule:ipairs()
-    return ipairs(self.properties)
+    local shallowCopy = TableUtil.CopyShallow(self.properties)
+    shallowCopy.Parent = nil
+    return ipairs(shallowCopy)
+end
+
+function EventModule:len()
+    return #self.properties
 end
 
 function EventModule:Disconnect(events)

@@ -233,7 +233,6 @@ return function()
 
                 --loop should return nested tables as objects
                 for i,v in Table:pairs() do
-                    expect(i).never.to.equal("Parent")
                     if typeof(v) == "table" then
                         -- Object values need to be available
                         expect(v[1]).to.equal(4)
@@ -244,9 +243,22 @@ return function()
                         -- mutations fires event
                         v[1] = true
                         expect(callCount).to.equal(1)
+
+                        --Parent object should not excist when looping through nested Tables
+                        for k,t in Table.a:pairs() do
+                            expect(k).never.to.equal("Parent")
+                        end
                     end
                 end
             end).never.to.throw()
+        end)
+    end)
+
+    describe(":len()", function()
+        it("should return the length of the table", function()
+            local Table = ChangedSignalModule.new({1,2,3, a = {4,5}})
+            expect(Table:len()).to.equal(3)
+            expect(Table.a:len()).to.equal(2)
         end)
     end)
 end
