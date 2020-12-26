@@ -193,16 +193,16 @@ return function()
         end)
     end)
 
-    describe("GetPropertyChangedEvent", function()
+    describe("GetPropertyChangedSignal", function()
         it("should provide a signal that fires on a specific properties change, creation or removal", function()
             local Table = ChangedSignalModule.new({a = 1})
             local callCount = 0
 
-            Table:GetPropertyChangedEvent("a"):Connect(function(oldVal, newVal)
+            Table:GetPropertyChangedSignal("a"):Connect(function(oldVal, newVal)
                 expect(oldVal).never.to.equal(newVal)
                 callCount = callCount + 1
             end)
-            Table:GetPropertyChangedEvent("b"):Connect(function()
+            Table:GetPropertyChangedSignal("b"):Connect(function()
                 callCount = callCount + 1
             end)
 
@@ -216,12 +216,29 @@ return function()
             
     end)
 
+    describe(":GetProperties()", function()
+        it("should return raw table copy of the object's properties, accounting for nested tables too", function()
+            local Table = ChangedSignalModule.new({1,2,3, a = {4,5,6}})
+            local properties = Table:GetProperties()
+
+            -- expect Raw tables
+            expect(properties.mutated).to.equal(nil)
+            expect(properties.a.mutated).to.equal(nil)
+
+            -- properties stay the same
+            expect(properties[1]).to.equal(Table[1])
+
+            --Event nested once
+            expect(properties.a[1]).to.equal(Table.a[1])
+        end)
+    end)
+
     describe("Looping", function()
         it("Object loopable with self:pairs() and self:ipairs()", function()
             local Table = ChangedSignalModule.new({1,2,3, a = {4,5,6}})
             local callCount = 0
 
-            Table.a.mutated:Connect(function()
+            Table.a.Mutated:Connect(function()
                 callCount = callCount + 1
             end)
 
@@ -259,6 +276,48 @@ return function()
             local Table = ChangedSignalModule.new({1,2,3, a = {4,5}})
             expect(Table:len()).to.equal(3)
             expect(Table.a:len()).to.equal(2)
+        end)
+    end)
+
+    describe(":insert()", function()
+        it("should insert value at end of list if pos not passed", function()
+            local Table = ChangedSignalModule.new({1,2,3})
+            Table:insert(10)
+            expect(Table[4]).to.equal(10)
+        end)
+
+        it("should push previous values uppward in array to clear space for specified insert position", function()
+            local Table = ChangedSignalModule.new({1,3,4})
+            Table:insert(2, 2)
+            local expectedTable = {1,2,3,4}
+        
+            for i,v in Table:pairs() do
+                expect(v).to.equal(expectedTable[i])
+            end
+        end)
+    end)
+
+    describe(":find()", function()
+        it("should return index of value if found, with respect to init index", function()
+            local Table = ChangedSignalModule.new({1,2,3,2,1})
+
+            -- unspesified init
+            expect(Table:find(2)).to.equal(2)
+
+            -- specified init
+            expect(Table:find(2, 4)).to.equal(4)
+        end)
+    end)
+
+    describe(":remove()", function()
+        it("should collapse values above the removed value down to fill the gap", function()
+            local Table = ChangedSignalModule.new({1,2,2,3})
+            Table:remove(2)
+            local expectedTable = {1,2,3}
+        
+            for i,v in Table:pairs() do
+                expect(v).to.equal(expectedTable[i])
+            end
         end)
     end)
 end

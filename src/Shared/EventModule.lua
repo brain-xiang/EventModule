@@ -9,14 +9,17 @@ Injected Properties:
     self = EventModule.new(tbl)    
     self.Parent
     self.mutated
-    self:GetPropertyChangedEvent(propertyName)
+    self:GetPropertyChangedSignal(propertyName)
+    self:GetProperties()
     self:pairs()
     self:ipairs()
     self:len()
+    self:insert(value, pos)
+    self:remove(pos)
+    self:find(value, init)
     self:Disconnect()
     self:DisconnectDescendants()
-    self:DisconnectAllParents(object)
-    self:DisassembleObject()
+    self:DisconnectAllParents()
     self:Destroy()
 
     Details:
@@ -36,15 +39,23 @@ Injected Properties:
                 newTable = self Object after change 
             end)
 
-        GetPropertyChangedEvent:
+        GetPropertyChangedSignal:
 
             returns a signal thats fired when a value of that table with the specifiedKey is, 
             created, changed or deleted.
 
-            self:GetPropertyChangedEvent(propertyName):Connect(function(oldVal, newVal)
+            self:GetPropertyChangedSignal(propertyName):Connect(function(oldVal, newVal)
                 oldVal = property's old value
                 newVal = property's new value
             end)
+
+        GetProperties:
+
+            Returns: a raw table copy of the object's properties
+
+            local properties = self:GetProperties()
+            print(properties) 
+            -- > {a copy of self's properties in raw table form}
 
         pairs:
             
@@ -67,6 +78,42 @@ Injected Properties:
 
             self:len() -- > table length
 
+        insert:
+
+               Roblox's table.insert() function uses rawset and therefore does not trigger the mutation and property events,
+               self:insert(value, pos) is an identical replacement that adresses this issue.
+                    value = value that's inserted
+                    pos = optional, number position in table where value will be inserted, defaults to #t+1
+
+               self:insert("LastValue")
+               print(self[self:len()]) -- > "LastValue"
+
+        remove:
+
+               Roblox's table.remove() function uses rawset and therefore does not trigger the mutation and property events,
+               self:remove(pos) is an identical replacement that adresses this issue.
+                    pos = Removes from at position pos, 
+                          returning the value of the removed element. 
+                          When pos is an integer between 1 and #t, 
+                          it shifts down the elements t[pos+1], t[pos+2], …, t[#t] and erases element t[#t]. 
+                          The index pos can also be 0 when #t is 0 or #t+1; 
+                          in those cases, the function erases the element t[pos].
+                
+               self = {1,2,3}
+               self:remove(2)
+               print(self) -- > {1,3}
+
+        find:
+
+               Roblox's table.find() function does not work on self,
+               self:find(value, init) is an identical replacement that adresses this issue.
+                    value = linear search performed, returns first index that matches "value"
+                    init = number pos where linear search starts
+
+               self = {1,2,3,2,1}
+               print(self:find(2)) -- > 2
+               print(self:find(2, 4)) -- > 4
+
         Disconnect:
 
             Disconnects all of the objects events
@@ -83,30 +130,25 @@ Injected Properties:
 
         DisconnectAllParents
 
-            object provided have all their parents Events Disconnected
-            if object not provided default to self
+            self has all their parents Events Disconnected
 
-            self:DisconnectAllParents(object)
+            self:DisconnectAllParents()
             -- all of self's events are still intact but all objects above self in the table hiarchy have had it's events Disconnected.
 
-        DisassembleObject
+        Destroy:
 
-            disassembles the object, removes all injected properties and returns the properties in a normal Table/dictionary
-
-            local disassembledTable = self:DisassembleObject()
-            print(disassembledTable) 
-            -- > {properties}
-            
-        Destroy
-
-            Alias for: Disconnect, DisconnectDescendants and DisassembleObject
+            deletes object and all its events/connections
+            returns: a raw table copy of the object's properties
 
             local event = self.mutated:Connect(function)
-            local destroyedTable = self:Destroy()
-            print(disassembledTable) 
-            -- > {properties}
+            local properties = self:Destroy()
             print(event)
             -- > nil
+            print(self)
+            -- > nil
+            print(properties) 
+            -- > {a copy of self's properties in raw table form}
+            
 --]]
 
 
@@ -176,8 +218,7 @@ function EventModule.new(tbl, parent)
 
                 -- storing event and it's args into mutationEvents tbl
                 if object.events.mutated then
-                    local oldTable = TableUtil.SafeCopy(object)
-                    oldTable = oldTable:DisassembleObject()
+                    local oldTable = object:GetProperties()
                     mutationEvents[object.events.mutated] = {oldTable, object}
                 end
 
@@ -209,7 +250,7 @@ function EventModule.new(tbl, parent)
 	return self
 end
 
-function EventModule:GetPropertyChangedEvent(Key)
+function EventModule:GetPropertyChangedSignal(Key)
     --[[
         input: string, name of the property the event is connected to
         returns: signal
@@ -232,6 +273,41 @@ end
 
 function EventModule:len()
     return #self.properties
+end
+
+function EventModule:insert(value, pos)
+    if pos and type(pos) ~= "number" then error(":insert() position has to be a number") return end
+    pos = pos or self:len() + 1
+    if self[pos] then
+        local prevValue = self[pos]
+        self[pos] = value
+        self:insert(prevValue, pos + 1)
+    else
+        self[pos] = value
+    end
+end
+
+function EventModule:find(value, init)
+    if init and type(init) ~= "number" then error(":find(), init position has to be a number") return end
+    init = init or 1
+
+    for i = init, self:len() do
+        if self[i] == value then 
+            return i
+        end
+    end
+    return nil
+end
+
+function EventModule:remove(pos)
+    if not pos or type(pos) ~= "number" then error(":remove(pos), requires a number position") return end
+
+    if self[pos+1] then
+        self[pos] = self[pos+1]
+        self:remove(pos+1)
+    else
+        self[pos] = nil
+    end
 end
 
 function EventModule:Disconnect(events)
@@ -274,31 +350,37 @@ function EventModule:DisconnectAllParents(object)
     end
 end
 
-function EventModule:DisassembleObject()
+function EventModule:GetProperties()
     --[[
-        input: object = EventModule object or self 
-        Returns: disassembles object into normal tbl
+        Returns: a raw table copy of the object's properties
     ]]
+
+    local copy = {}
     for i,v in pairs(self.properties) do
         if typeof(v) == "table" and i ~= "Parent" then
-            self.properties[i] = v:DisassembleObject()
-        elseif i == "Parent" then
-            self.properties[i] = nil
+            copy[i] = v:GetProperties()
+        elseif i ~= "Parent" then
+            copy[i] = v
         end
     end
 
-    return self.properties
+    return copy
 end
 
 function EventModule:Destroy()
     --[[
-        input: object = EventModule object or self 
-        Returns: object and it's descendants converted to normal table, and disconnects all connections
+        deletes object and all its events/connections
+        returns: a raw table copy of the object's properties
     ]]
 
     self:Disconnect()
     self:DisconnectDescendants()
-    return self:DisassembleObject()
+    local properties = self:GetProperties()
+    self.properties = nil
+    self.events = nil
+    self = nil
+
+    return properties
 end
 
 
