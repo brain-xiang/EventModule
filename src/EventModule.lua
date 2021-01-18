@@ -151,7 +151,6 @@ Injected Properties:
             
 --]]
 
-
 local EventModule = {}
 local Signal = require(script.Parent.Signal)
 local TableUtil = require(script.Parent.TableUtil)
@@ -170,8 +169,9 @@ function EventModule.new(tbl, parent)
             self.properties = {
                 [propertyName] = property,
                 ["PropertyTableName"] = EventModule.new(tbl, self.events)
-                ["Parent"]= parentObject*
             }
+
+            self.Parent = parentObject*
     ]]
     if tbl and typeof(tbl) ~= "table" then error("EventModule only accepts tables") return end
     if tbl and tbl.mutated then return end
@@ -179,7 +179,7 @@ function EventModule.new(tbl, parent)
     local metaTable = {}
     local self = setmetatable(TableUtil.Copy(EventModule), metaTable)
     self.properties = tbl or {}
-    self.properties.Parent = parent
+    self.Parent = parent
     self.events = {}
 
     metaTable.__index = function(tableAccessed,key)
@@ -188,56 +188,65 @@ function EventModule.new(tbl, parent)
             return self.events.mutated
         end
 
-
         return self.properties[key]
     end
     
     metaTable.__newindex = function(tableAccessed,key,value)
-        if self.properties[key] ~= value and key ~= "Parent" and key ~= "properties" then
-            
-            -- Disconecting signals when object no longer indexed
-            if typeof(self.properties[key]) == "table" then
-                self.properties[key]:Destroy()
+        if key == "properties" or key == "events" then warn("Trying to change reserved indexes [EventModule Object]") return end  -- forbidden indexes
+        if self.properties == value or self == value then warn("Trying to create cercular dependancies") return end
+        if self.properties[key] == value then return end -- Duplicate value
+
+        -- Firing propertyChangedEvents
+        if self.events[key] then
+            self.events[key]:Fire(self.properties[key], value) -- oldVal, newVal
+        end
+
+        --Getting all mutation events events
+        local function getMutationEvents(object, mutationEvents)
+            --[[
+                input: object = EventModule object or self, mutationEvents = tbl, Not Required* where all events are stored before return
+                returns: mutationEvents = {
+                    signal = {oldTable, newTable(aka. self object)}
+                }
+            ]]
+
+            object = object or self
+            mutationEvents = mutationEvents or {}
+
+            -- storing event and it's args into mutationEvents tbl
+            if object.events.mutated then
+                local oldTable = object:GetProperties()
+                mutationEvents[object.events.mutated] = {oldTable, object}
             end
 
-            -- Firing propertyChangedEvents
-            if self.events[key] then
-                self.events[key]:Fire(self.properties[key], value) -- oldVal, newVal
+            if object.Parent then
+                getMutationEvents(object.Parent, mutationEvents)
             end
 
-            --Getting all mutation events events
-            local function getMutationEvents(object, mutationEvents)
-                --[[
-                    input: object = EventModule object or self, mutationEvents = tbl, Not Required* where all events are stored before return
-                    returns: mutationEvents = {
-                        signal = {oldTable, newTable(aka. self object)}
-                    }
-                ]]
+            return mutationEvents
+        end
+        local mutationEvents = getMutationEvents()
 
-                object = object or self
-                mutationEvents = mutationEvents or {}
+        -- Disconecting signals when object no longer indexed
+        if typeof(self.properties[key]) == "table" then
+            self.properties[key]:Destroy()
+        end
 
-                -- storing event and it's args into mutationEvents tbl
-                if object.events.mutated then
-                    local oldTable = object:GetProperties()
-                    mutationEvents[object.events.mutated] = {oldTable, object}
-                end
-
-                if object.Parent then
-                    getMutationEvents(object.Parent, mutationEvents)
-                end
-
-                return mutationEvents
+        -- Uppdateing table values 
+        if typeof(value) == "table" and not value.mutated then -- creates new object if value is a raw table
+            self.properties[key] = self.new(value, self)
+        elseif typeof(value) == "table" and value.mutated then -- insert object and change parent if value is another EvetnModule Object  
+            self.properties[key] = value
+            if not value.Parent and key ~= "Parent" then
+                value.Parent = self
             end
-            local mutationEvents = getMutationEvents()
+        else
+            self.properties[key] = value
+        end
 
-            -- Uppdateing table values, creates new object if value is a table
-            self.properties[key] = typeof(value) == "table" and self.new(value, self) or value
-
-            -- Firing mutationEvents
-            for signal, args in pairs(mutationEvents) do
-                signal:Fire(args[1], args[2]) -- oldTable, newObject
-            end
+        -- Firing mutationEvents
+        for signal, args in pairs(mutationEvents) do
+            signal:Fire(args[1], args[2]) -- oldTable, newObject
         end
     end
 
@@ -373,13 +382,9 @@ function EventModule:Destroy()
         deletes object and all its events/connections
         returns: a raw table copy of the object's properties
     ]]
-
+    local properties = self:GetProperties()
     self:Disconnect()
     self:DisconnectDescendants()
-    local properties = self:GetProperties()
-    self.properties = nil
-    self.events = nil
-    self = nil
 
     return properties
 end

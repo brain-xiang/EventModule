@@ -17,6 +17,22 @@ return function()
             Table.a = {}
             expect(Table.a.mutated).never.to.equal(nil)
         end)
+
+        it("Inserted EventModule Objects should work, Add .Parent if previoustly nil", function()
+            local Table = ChangedSignalModule.new()
+            local Table2 = ChangedSignalModule.new()
+            Table3 = ChangedSignalModule.new({
+                b = {}
+            })
+
+            Table.a = Table2
+            expect(Table.a).to.equal(Table2)
+            expect(Table2.Parent).to.equal(Table)
+
+            Table.b = Table3.b 
+            expect(Table.b).to.equal(Table3.b)
+            expect(Table3.b.Parent).never.to.equal(Table)
+        end)
     end)
 
     describe("mutated Event", function()
