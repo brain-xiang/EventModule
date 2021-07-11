@@ -88,6 +88,8 @@ Injected Properties:
                self:insert("LastValue")
                print(self[self:len()]) -- > "LastValue"
 
+               NOTE: will only fire .mutated once
+
         remove:
 
                Roblox's table.remove() function uses rawset and therefore does not trigger the mutation and property events,
@@ -102,6 +104,8 @@ Injected Properties:
                self = {1,2,3}
                self:remove(2)
                print(self) -- > {1,3}
+
+               NOTE: will only fire .mutated once
 
         find:
 
@@ -290,7 +294,7 @@ function EventModule:insert(value, pos)
     pos = pos or self:len() + 1
     if self[pos] then
         local prevValue = self[pos]
-        self[pos] = value
+        self.properties[pos] = value
         self:insert(prevValue, pos + 1)
     else
         self[pos] = value
@@ -313,7 +317,7 @@ function EventModule:remove(pos)
     if not pos or type(pos) ~= "number" then error(":remove(pos), requires a number position") return end
 
     if self[pos+1] then
-        self[pos] = self[pos+1]
+        self.properties[pos] = self[pos+1]
         self:remove(pos+1)
     else
         self[pos] = nil

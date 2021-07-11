@@ -24,7 +24,7 @@ return function()
             Table3 = ChangedSignalModule.new({
                 b = {}
             })
-
+            
             Table.a = Table2
             expect(Table.a).to.equal(Table2)
             expect(Table2.Parent).to.equal(Table)
@@ -309,6 +309,18 @@ return function()
                 expect(v).to.equal(expectedTable[i])
             end
         end)
+
+        it("should only fire .mutated event once when value inserted into middle of array (not for every pushing action)", function()
+            local t = ChangedSignalModule.new({"a", "c", "d"})
+            local callCount = 0
+            t.mutated:Connect(function(old, new)
+                callCount += 1
+            end)
+            t:insert("b", 2)
+
+            print(callCount, " INSERT CALLCOUNT")
+            expect(callCount).to.equal(1)
+        end)
     end)
 
     describe(":find()", function()
@@ -332,6 +344,17 @@ return function()
             for i,v in Table:pairs() do
                 expect(v).to.equal(expectedTable[i])
             end
+        end)
+        it("should only fire .mutated event once when value removing val from middle of array (not for every filling action)", function()
+            local t = ChangedSignalModule.new({"a", "b", "c", "d"})
+            local callCount = 0
+            t.mutated:Connect(function(old, new)
+                callCount += 1
+            end)
+            t:remove(2)
+
+            print(callCount, " REMOVE CALLCOUNT")
+            expect(callCount).to.equal(1)
         end)
     end)
 end
